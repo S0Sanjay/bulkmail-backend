@@ -6,22 +6,16 @@ require("dotenv").config();
 
 const app = express();
 
-app.use((req, res, next) => {
-  res.setHeader(
-    "Access-Control-Allow-Origin",
-    "https://bulkmail-frontend-eosin.vercel.app",
-  );
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-
-  next();
-});
+app.use(
+  cors({
+    origin: "https://bulkmail-frontend-eosin.vercel.app",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 app.use(express.json());
+
 mongoose
   .connect(process.env.MONGO_URI)
   .then(function () {
@@ -59,8 +53,6 @@ app.get("/", function (req, res) {
 app.post("/sendemail", async function (req, res) {
   const { subject, message, emailList } = req.body;
 
-  res.send({ success: true, msg: "Emails are being sent..." });
-
   try {
     for (let i = 0; i < emailList.length; i++) {
       await transporter.sendMail({
@@ -80,6 +72,7 @@ app.post("/sendemail", async function (req, res) {
     }).save();
 
     console.log("All emails sent & saved");
+    res.send({ success: true });
   } catch (error) {
     console.log("Error:", error.message);
 
@@ -89,6 +82,8 @@ app.post("/sendemail", async function (req, res) {
       emailList,
       status: "failed",
     }).save();
+
+    res.send({ success: false, error: error.message });
   }
 });
 
