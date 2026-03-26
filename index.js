@@ -6,13 +6,24 @@ require("dotenv").config();
 
 const app = express();
 
-app.use(
-  cors({
-    origin: "https://bulkmail-frontend-eosin.vercel.app",
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+var corsOptions = {
+  origin: ["https://bulkmail-frontend-eosin.vercel.app"]
+};
+
+app.use(cors(corsOptions));
+
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "https://bulkmail-frontend-eosin.vercel.app");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  next();
+});
+
+app.options("*", (req, res) => {
+  res.header("Access-Control-Allow-Origin", "https://bulkmail-frontend-eosin.vercel.app");
+  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, PATCH, DELETE");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.send();
+});
 
 app.use(express.json());
 
@@ -71,7 +82,6 @@ app.post("/sendemail", async function (req, res) {
       status: "success",
     }).save();
 
-    console.log("All emails sent & saved");
     res.send({ success: true });
   } catch (error) {
     console.log("Error:", error.message);
@@ -91,11 +101,9 @@ app.get("/history", function (req, res) {
   Email.find()
     .sort({ sentAt: -1 })
     .then(function (data) {
-      console.log("History fetched:", data.length, "records");
       res.send(data);
     })
     .catch(function (err) {
-      console.log("Error fetching history:", err);
       res.send([]);
     });
 });
