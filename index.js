@@ -8,7 +8,7 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
-mongoose.connect("mongodb+srv://bulkmail:bulkmail@bulkmail.rym7q5d.mongodb.net/?appName=bulkmail").then(function(){
+mongoose.connect("mongodb+srv://sanjay:123@cluster0.ffepgr7.mongodb.net/?appName=Cluster0").then(function(){
   console.log("Connected to DB")
 }).catch(function(){
   console.log("Failed to Connect")
