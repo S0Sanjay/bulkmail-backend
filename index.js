@@ -1,77 +1,60 @@
-const express = require("express")
-const cors = require("cors")
-const app = express()
+const express = require("express");
+const cors = require("cors");
+const app = express();
 
-app.use(cors(corsOptions))
-
-app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "https://bulkmail-frontend-eosin.vercel.app/"); // update to match the domain you will make the request from
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-    next();
-  });
-  
-  app.options('*', (req, res) => { 
-    // Pre-flight request. Reply successfully:
-    res.header('Access-Control-Allow-Origin', 'https://bulkmail-frontend-eosin.vercel.app/');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-    res.send();
-  });
-  
+// ✅ Define corsOptions BEFORE using it
 var corsOptions = {
-    origin: ["https://bulkmail-frontend-eosin.vercel.app//"]
-  };
+  origin: "https://bulkmail-frontend-eosin.vercel.app", // ❌ removed double slash at end
+};
 
-app.use(express.json())
+app.use(cors(corsOptions)); // ✅ now corsOptions is defined
 
-//Install NODEMAILER
+app.use(express.json());
+
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-  service:"gmail",
+  service: "gmail",
   auth: {
-    // TODO: replace `user` and `pass` values from <https://forwardemail.net>
     user: "sanjaysarav01@gmail.com",
     pass: "oohb jtiw uflu wekk",
   },
 });
 
 const emailTemplate = (message, recipient) => ({
-    from: "sanjaysarav01@gmail.com",
-    to: recipient,
-    subject: 'You get Text Message from Your App!',
-    text: message
-  });
+  from: "sanjaysarav01@gmail.com",
+  to: recipient,
+  subject: "You get Text Message from Your App!",
+  text: message,
+});
 
-const sendMails = ({message, emailList}) => {
-    return new Promise(async (resolve, reject) => {
-        try {
-            for (const recipient of emailList) {
-                const mailOptions = emailTemplate(message, recipient);
-        
-                await transporter.sendMail(mailOptions);
-                console.log(`Email sent to ${recipient}`);
-            }
-            resolve("Success")
-        } catch (error) {
-            console.error('Error sending emails:', error.message);
-            reject(error.message)
-        }
-    })
+const sendMails = ({ message, emailList }) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      for (const recipient of emailList) {
+        const mailOptions = emailTemplate(message, recipient);
+        await transporter.sendMail(mailOptions);
+        console.log(`Email sent to ${recipient}`);
+      }
+      resolve("Success");
+    } catch (error) {
+      console.error("Error sending emails:", error.message);
+      reject(error.message);
+    }
+  });
 };
 
-app.post("/sendemail",function(req,res){
-
-    sendMails(req.body).then((response) => {
-        console.log(response)
-        res.send(true);
+app.post("/sendemail", function (req, res) {
+  sendMails(req.body)
+    .then((response) => {
+      console.log(response);
+      res.send(true);
     })
     .catch((error) => {
-        res.send(false);
-    })
+      res.send(false);
+    });
+});
 
-})
-
-app.listen(5000,function(){
-    console.log("Server Started.....")
-})
+app.listen(5000, function () {
+  console.log("Server Started.....");
+});
