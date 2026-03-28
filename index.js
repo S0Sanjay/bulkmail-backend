@@ -5,49 +5,17 @@ const mongoose = require("mongoose");
 require("dotenv").config();
 
 const app = express();
-
-var corsOptions = {
-  origin: ["https://bulkmail-frontend-eosin.vercel.app"],
-};
-
-app.use(cors(corsOptions));
-
-app.use((req, res, next) => {
-  res.header(
-    "Access-Control-Allow-Origin",
-    "https://bulkmail-frontend-eosin.vercel.app",
-  );
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept",
-  );
-  next();
-});
-
-app.options("*", (req, res) => {
-  res.header(
-    "Access-Control-Allow-Origin",
-    "https://bulkmail-frontend-eosin.vercel.app",
-  );
-  res.header(
-    "Access-Control-Allow-Methods",
-    "GET, POST, OPTIONS, PUT, PATCH, DELETE",
-  );
-  res.header("Access-Control-Allow-Headers", "Content-Type");
-  res.send();
-});
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
 
 app.use(express.json());
-
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(function () {
-    console.log("MongoDB Connected");
-  })
-  .catch(function (err) {
-    console.log("MongoDB Error:", err);
-  });
-
+  .then(() => console.log("MongoDB Connected"))
+  .catch((err) => console.log("MongoDB Error:", err));
 const emailSchema = new mongoose.Schema({
   subject: String,
   message: String,
@@ -60,7 +28,6 @@ const emailSchema = new mongoose.Schema({
 });
 
 const Email = mongoose.model("Email", emailSchema);
-
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -68,59 +35,45 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
-
-const sendMails = ({ subject, message, emailList }) => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      for (const recipient of emailList) {
-        await transporter.sendMail({
-          from: process.env.EMAIL_USER,
-          to: recipient,
-          subject: subject,
-          text: message,
-        });
-        console.log(`Email sent to ${recipient}`);
-      }
-      resolve("Success");
-    } catch (error) {
-      console.error("Error sending emails:", error.message);
-      reject(error.message);
-    }
-  });
-};
-
-app.get("/", function (req, res) {
+app.get("/", (req, res) => {
   res.send("BulkMail Backend is Running!");
 });
-
-app.post("/sendemail", function (req, res) {
+app.post("/sendemail", async (req, res) => {
   const { subject, message, emailList } = req.body;
+  if (!subject || !message || !emailList || emailList.length === 0) {
+    return res.status(400).json({ success: false, msg: "All fields are required." });
+  }
+  res.json({ success: true, msg: "Emails are being sent..." });
 
-  sendMails({ subject, message, emailList })
-    .then(async function () {
-      await new Email({
-        subject,
-        message,
-        emailList,
-        status: "success",
-      }).save();
-      res.send({ success: true });
-    })
-    .catch(async function (error) {
-      await new Email({ subject, message, emailList, status: "failed" }).save();
-      res.send({ success: false, error: error });
-    });
+  try {
+    for (let i = 0; i < emailList.length; i++) {
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: emailList[i],
+        subject: subject,
+        text: message,
+      });
+      console.log("Email Sent to:", emailList[i]);
+    }
+
+    await new Email({ subject, message, emailList, status: "success" }).save();
+    console.log("All emails sent and saved.");
+  } catch (error) {
+    console.log("Error sending email:", error.message);
+    await new Email({ subject, message, emailList, status: "failed" }).save();
+  }
 });
-
-app.get("/history", function (req, res) {
-  Email.find()
-    .sort({ sentAt: -1 })
-    .then(function (data) {
-      res.send(data);
-    })
-    .catch(function (err) {
-      res.send([]);
-    });
+app.get("/history", async (req, res) => {
+  const adminKey = req.headers["x-admin-key"];
+  if (adminKey !== process.env.ADMIN_KEY) {
+    return res.status(401).json({ success: false, msg: "Unauthorized" });
+  }
+  try {
+    const data = await Email.find().sort({ sentAt: -1 });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ success: false, msg: "Error fetching history" });
+  }
 });
 
 module.exports = app;
