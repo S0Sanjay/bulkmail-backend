@@ -1,60 +1,75 @@
-const express = require("express");
-const cors = require("cors");
-const app = express();
-
-// ✅ Define corsOptions BEFORE using it
-var corsOptions = {
-  origin: "https://bulkmail-frontend-eosin.vercel.app", // ❌ removed double slash at end
-};
-
-app.use(cors(corsOptions)); // ✅ now corsOptions is defined
-
-app.use(express.json());
-
+const express = require("express")
+const cors = require("cors")
 const nodemailer = require("nodemailer");
+const mongoose = require("mongoose")
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
+const app = express()
+
+app.use(cors())
+app.use(express.json())
+
+mongoose.connect("mongodb+srv://bulkmail:bulkmail@bulkmail.rym7q5d.mongodb.net/?appName=bulkmail").then(function(){
+  console.log("Connected to DB")
+}).catch(function(){
+  console.log("Failed to Connect")
+})
+
+
+const credential = mongoose.model("credential",{},"bulkmail")
+
+
+app.post("/sendemail",function(req,res){
+
+  var msg = req.body.msg
+  var emailList = req.body.emailList
+
+  credential.find().then(function(data){
+  const transporter = nodemailer.createTransport({
+  service:"gmail",
   auth: {
-    user: "sanjaysarav01@gmail.com",
-    pass: "oohb jtiw uflu wekk",
+    user: data[0].toJSON().user,
+    pass: data[0].toJSON().pass,
   },
-});
-
-const emailTemplate = (message, recipient) => ({
-  from: "sanjaysarav01@gmail.com",
-  to: recipient,
-  subject: "You get Text Message from Your App!",
-  text: message,
-});
-
-const sendMails = ({ message, emailList }) => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      for (const recipient of emailList) {
-        const mailOptions = emailTemplate(message, recipient);
-        await transporter.sendMail(mailOptions);
-        console.log(`Email sent to ${recipient}`);
-      }
-      resolve("Success");
-    } catch (error) {
-      console.error("Error sending emails:", error.message);
-      reject(error.message);
-    }
   });
-};
 
-app.post("/sendemail", function (req, res) {
-  sendMails(req.body)
-    .then((response) => {
-      console.log(response);
-      res.send(true);
-    })
-    .catch((error) => {
-      res.send(false);
-    });
-});
+   new Promise(async function(resolve,reject){
+    try{
+      for(var i=0; i<emailList.length; i++)
+      {
+        await transporter.sendMail(
+          {
+            from:"sanjaysarav01@gmail.com",
+            to:emailList[i],
+            subject:"A message from BulkMail App",
+            text:msg
+          }
+        )
 
-app.listen(5000, function () {
-  console.log("Server Started.....");
-});
+        console.log("Email Sent to:"+emailList[i])
+      }
+      resolve("Success")
+    }
+    catch(error)
+    {
+      reject("Failed")
+    }
+  }).then(function(){
+    res.send(true)
+  }).catch(function(){
+    res.send(false)
+  })
+
+}).catch(function(error){
+  console.log(error)
+})
+
+
+
+})
+
+     
+
+
+app.listen(5000,function(){
+    console.log("Server Started...")
+})

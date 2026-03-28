@@ -11,8 +11,17 @@
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.6",
-    "express": "^4.18.2",
-    "nodemailer": "^6.9.8",
+    "express": "^4.22.1",
+    "nodemailer": "^6.10.1",
     "xlsx": "^0.18.5"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/S0Sanjay/bulkmail-backend.git"
+  },
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/S0Sanjay/bulkmail-backend/issues"
+  },
+  "homepage": "https://github.com/S0Sanjay/bulkmail-backend#readme"
 }
